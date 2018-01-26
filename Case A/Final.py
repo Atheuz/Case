@@ -10,7 +10,7 @@ from sklearn.svm import SVR, NuSVR, LinearSVR
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import cross_val_score
-from sklearn.preprocessing import normalize
+from sklearn.preprocessing import normalize, StandardScaler, Normalizer
 from sklearn.feature_selection import SelectFromModel
 from sklearn.pipeline import Pipeline
 from sklearn.feature_selection import VarianceThreshold
@@ -19,31 +19,31 @@ from sklearn.externals import joblib
 def main():
     # Define column names, types
     COLUMN_TYPES = collections.OrderedDict([
-        ("crime", float), # Important
+        ("crime", float), 
         ("zn", float),
         ("indus", float),
         ("chas", int),
         ("nox", float),
-        ("rm", float), # Important! Without this accuracy drops
+        ("rm", float), 
         ("age", float),
-        ("dis", float), # Important! 
+        ("dis", float), 
         ("rad", int),
         ("tax", int),
-        ("ptratio", float), # Important!
-        ("b", float), # Doesnt do much
-        ("lstat", float), # Important
+        ("ptratio", float),
+        ("b", float), 
+        ("lstat", float),
         ("medv", float)
     ])
     # Read into pandas dataframe
     df = pd.read_csv('housingdata.csv', header=0, delimiter=';', names=COLUMN_TYPES.keys(), dtype=COLUMN_TYPES)
 
     # Establish seed for consistency.
-    seed = sum([ord(x) for x in "LIGHT FROM LIGHT"])
-    np.random.seed(seed)
+    #seed = sum([ord(x) for x in "LIGHT FROM LIGHT"])
+    #np.random.seed(seed)
 
     # Sample the full dataset randomly, i.e for the purpose of shuffling it.
     y_name = 'medv'
-    df_sampled = df.sample(frac=1, random_state=seed)
+    df_sampled = df.sample(frac=1)
     df_sampled["medv"] = df_sampled["medv"]
 
     # Features
@@ -53,14 +53,9 @@ def main():
     y_train = x_train.pop(y_name)
     y_valid = x_valid.pop(y_name)
     y_test  = x_test.pop(y_name)
-
-    model = Pipeline([('regression', GradientBoostingRegressor(loss='huber', 
-                                                               max_depth=3, 
-                                                               min_samples_split=4, 
-                                                               n_estimators=300,
-                                                               learning_rate=0.1,
-                                                               random_state=seed))
-    ])
+    params = {'n_estimators': 500, 'max_depth': 4, 'min_samples_split': 2,'learning_rate': 0.01, 'loss': 'huber'}
+    model = Pipeline([#('scaler', Normalizer()),
+                      ('regression', GradientBoostingRegressor(**params))])
 
     # Validation run
     model.fit(x_train, y_train)
