@@ -14,6 +14,7 @@ from sklearn.preprocessing import normalize
 from sklearn.feature_selection import SelectFromModel
 from sklearn.pipeline import Pipeline
 from sklearn.feature_selection import VarianceThreshold
+from sklearn.externals import joblib
 
 def main():
     # Define column names, types
@@ -40,11 +41,10 @@ def main():
     seed = sum([ord(x) for x in "LIGHT FROM LIGHT"])
     np.random.seed(seed)
 
-    # Sample the full dataset randomly, i.e for the purpose of shuffling it. Also remove the mean from targets.
+    # Sample the full dataset randomly, i.e for the purpose of shuffling it.
     y_name = 'medv'
-    mean = np.mean(df["medv"])
     df_sampled = df.sample(frac=1, random_state=seed)
-    df["medv"] = df["medv"].apply(lambda x: (x - mean))
+    df_sampled["medv"] = df_sampled["medv"]
 
     # Features
     x_train, x_valid = np.split(df_sampled, [int(0.9*len(df_sampled))])
@@ -72,6 +72,7 @@ def main():
     print('R2 score: %.2f' % r2_score(y_valid, y_pred)) # 1 is perfect
 
     # Finally test on test set.
+    y_test = y_test
     y_test_pred = pd.Series(model.predict(x_test), index=y_test.index)
     print("Mean squared error: %.2f" % mean_squared_error(y_test, y_test_pred)) # Lower the better
     print("Mean absolute error: %.2f" % mean_absolute_error(y_test, y_test_pred)) # Lower the better
@@ -79,6 +80,7 @@ def main():
     print('R2 score: %.2f' % r2_score(y_test, y_test_pred)) # 1 is perfect
 
     # Good enough! Model is finished, now it can be saved and hosted that can be queried through an API endpoint. Out of scope for this.
+    joblib.dump(model, 'model.pkl') 
 
 if __name__ == '__main__':
     main()
