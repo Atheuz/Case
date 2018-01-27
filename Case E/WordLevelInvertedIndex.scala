@@ -10,7 +10,7 @@ object WordLevelInvertedIndex {
                       val array = line.split(":", 2)
                       (array(0), array(1))
                     } 
-                  .flatMap { // flatMap split on non-word characters, rdd is now a column of words, and a column of doc_id's that contain those words. Also add location inside the document.
+                  .flatMap { // flatMap split on one or more non-word characters, RDD is now a column of words, and a column of doc_id's that contain those words. Also calculate location inside the document.
                     case (doc_id, text) =>
                       val text2 = text.toLowerCase() // Do some minor preprocessing, real life circumstances would warrant more preprocessing such as stemming, removal of punctuation, stopword removal
                       text2.split("""\W+""") map {
@@ -34,12 +34,11 @@ object WordLevelInvertedIndex {
                       val seq2 = seq map {
                         case (_, (doc_id, pos, n)) => (doc_id, pos, n)
                       }
-                    (word, seq2.mkString(", ")) // Convert doc_id, pos, n tuple to string
+                    (word, seq2.toVector) // Convert doc_id, pos, n tuple sequence to vector
                   }
-                 //.saveAsTextFile("Filestore/tables/out.txt")
-    val df = spark.createDataFrame(result)
-    val finaldf = df.toDF("word", "doc_id, pos, count")
-    finaldf.show()
+    val df = spark.createDataFrame(result) # Convert to dataframe without specifying the schema
+    val finaldf = df.toDF("word", "doc_id, pos, count") # Add column names.
+    finaldf.show() # Show top 20.
   }
 }
 
