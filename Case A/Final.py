@@ -1,81 +1,87 @@
 import pandas as pd
-import tensorflow as tf
 import collections
 import numpy as np
-from sklearn import linear_model
 from sklearn.metrics import mean_squared_error, mean_absolute_error, explained_variance_score, r2_score
-import matplotlib.pyplot as plt
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor, ExtraTreesRegressor
-from sklearn.svm import SVR, NuSVR, LinearSVR
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import cross_val_score
-from sklearn.preprocessing import normalize, StandardScaler, Normalizer
-from sklearn.feature_selection import SelectFromModel
+from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.pipeline import Pipeline
-from sklearn.feature_selection import VarianceThreshold
 from sklearn.externals import joblib
 
+class HousePriceRegressor(object):
+    def __init__(self):
+        self.df_sampled = None
+        self.model = None
+
+    def load_data(self):
+        # Define column names, types
+        COLUMN_TYPES = collections.OrderedDict([
+            ("crime", float), 
+            ("zn", float),
+            ("indus", float),
+            ("chas", int),
+            ("nox", float),
+            ("rm", float), 
+            ("age", float),
+            ("dis", float), 
+            ("rad", int),
+            ("tax", int),
+            ("ptratio", float),
+            ("b", float), 
+            ("lstat", float),
+            ("medv", float)
+        ])
+        # Read into pandas dataframe
+        df = pd.read_csv('housingdata.csv', header=0, delimiter=';', names=COLUMN_TYPES.keys(), dtype=COLUMN_TYPES)
+
+        # Establish seed for consistency.
+        #seed = sum([ord(x) for x in "LIGHT FROM LIGHT"])
+        #np.random.seed(seed)
+
+        # Sample the full dataset randomly, i.e for the purpose of shuffling it.
+        self.y_name = 'medv'
+        self.df_sampled = df.sample(frac=1, random_state=1)
+        self.df_sampled[self.y_name] = self.df_sampled[self.y_name]
+
+    def split_data(self):
+        # Features
+        self.x_train, self.x_valid = np.split(self.df_sampled, [int(0.9*len(self.df_sampled))])
+        self.x_train, self.x_test = np.split(self.x_train, [int(0.9*len(self.x_train))])
+        # Targets
+        self.y_train = self.x_train.pop(self.y_name)
+        self.y_valid = self.x_valid.pop(self.y_name)
+        self.y_test  = self.x_test.pop(self.y_name)
+
+    def make_model(self):
+        params = {'n_estimators': 5000, 'max_depth': 4, 'min_samples_split': 2,'learning_rate': 0.01, 'loss': 'huber'}
+        self.model = Pipeline([('regression', GradientBoostingRegressor(**params))])
+
+    def fit_model(self):
+        # Validation run
+        self.model.fit(self.x_train, self.y_train)
+        y_pred = pd.Series(self.model.predict(self.x_valid), index=self.y_valid.index)
+        print("Mean squared error: %.2f" % mean_squared_error(self.y_valid, y_pred)) # Lower the better
+        print("Mean absolute error: %.2f" % mean_absolute_error(self.y_valid, y_pred)) # Lower the better
+        print("Explained Variance Score: %.2f" % explained_variance_score(self.y_valid, y_pred)) # Explained variance score: 1 is perfect
+        print('R2 score: %.2f' % r2_score(self.y_valid, y_pred)) # 1 is perfect
+
+    def test_model(self):
+        # Finally test on test set.
+        y_test_pred = pd.Series(self.model.predict(self.x_test), index=self.y_test.index)
+        print("Mean squared error: %.2f" % mean_squared_error(self.y_test, y_test_pred)) # Lower the better
+        print("Mean absolute error: %.2f" % mean_absolute_error(self.y_test, y_test_pred)) # Lower the better
+        print("Explained Variance Score: %.2f" % explained_variance_score(self.y_test, y_test_pred)) # Explained variance score: 1 is perfect
+        print('R2 score: %.2f' % r2_score(self.y_test, y_test_pred)) # 1 is perfect
+
+    def save_model(self):
+        joblib.dump(self.model, 'model.pkl') 
+
 def main():
-    # Define column names, types
-    COLUMN_TYPES = collections.OrderedDict([
-        ("crime", float), 
-        ("zn", float),
-        ("indus", float),
-        ("chas", int),
-        ("nox", float),
-        ("rm", float), 
-        ("age", float),
-        ("dis", float), 
-        ("rad", int),
-        ("tax", int),
-        ("ptratio", float),
-        ("b", float), 
-        ("lstat", float),
-        ("medv", float)
-    ])
-    # Read into pandas dataframe
-    df = pd.read_csv('housingdata.csv', header=0, delimiter=';', names=COLUMN_TYPES.keys(), dtype=COLUMN_TYPES)
-
-    # Establish seed for consistency.
-    #seed = sum([ord(x) for x in "LIGHT FROM LIGHT"])
-    #np.random.seed(seed)
-
-    # Sample the full dataset randomly, i.e for the purpose of shuffling it.
-    y_name = 'medv'
-    df_sampled = df.sample(frac=1)
-    df_sampled["medv"] = df_sampled["medv"]
-
-    # Features
-    x_train, x_valid = np.split(df_sampled, [int(0.9*len(df_sampled))])
-    x_train, x_test = np.split(x_train, [int(0.9*len(x_train))])
-    # Targets
-    y_train = x_train.pop(y_name)
-    y_valid = x_valid.pop(y_name)
-    y_test  = x_test.pop(y_name)
-    params = {'n_estimators': 500, 'max_depth': 4, 'min_samples_split': 2,'learning_rate': 0.01, 'loss': 'huber'}
-    model = Pipeline([#('scaler', Normalizer()),
-                      ('regression', GradientBoostingRegressor(**params))])
-
-    # Validation run
-    model.fit(x_train, y_train)
-    y_valid = y_valid
-    y_pred = pd.Series(model.predict(x_valid), index=y_valid.index)
-    print("Mean squared error: %.2f" % mean_squared_error(y_valid, y_pred)) # Lower the better
-    print("Mean absolute error: %.2f" % mean_absolute_error(y_valid, y_pred)) # Lower the better
-    print("Explained Variance Score: %.2f" % explained_variance_score(y_valid, y_pred)) # Explained variance score: 1 is perfect
-    print('R2 score: %.2f' % r2_score(y_valid, y_pred)) # 1 is perfect
-
-    # Finally test on test set.
-    y_test = y_test
-    y_test_pred = pd.Series(model.predict(x_test), index=y_test.index)
-    print("Mean squared error: %.2f" % mean_squared_error(y_test, y_test_pred)) # Lower the better
-    print("Mean absolute error: %.2f" % mean_absolute_error(y_test, y_test_pred)) # Lower the better
-    print("Explained Variance Score: %.2f" % explained_variance_score(y_test, y_test_pred)) # Explained variance score: 1 is perfect
-    print('R2 score: %.2f' % r2_score(y_test, y_test_pred)) # 1 is perfect
-
-    # Good enough! Model is finished, now it can be saved and hosted that can be queried through an API endpoint. Out of scope for this.
-    joblib.dump(model, 'model.pkl') 
+    hpr = HousePriceRegressor()
+    hpr.load_data()
+    hpr.split_data()
+    hpr.make_model()
+    hpr.fit_model()
+    hpr.test_model()
+    hpr.save_model()
 
 if __name__ == '__main__':
     main()
