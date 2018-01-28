@@ -1,14 +1,8 @@
 from keras.models import Sequential
-from keras.layers import Dense, Convolution2D, MaxPooling2D, Dropout, Flatten
-from keras.layers import MaxPooling2D
-from keras.layers import Dropout, Activation, Flatten
-from keras.utils import np_utils
-from keras.preprocessing.image import ImageDataGenerator
-from sklearn.metrics import mean_squared_error, mean_absolute_error, explained_variance_score, r2_score
-import pandas as pd
+from keras.layers import Dense, Convolution2D, MaxPooling2D, Dropout, Flatten, Activation
 import numpy as np
 import pickle
-from sklearn.utils import shuffle
+import sklearn.utils
 import keras.backend as K
 import keras.utils
 from sklearn.externals import joblib
@@ -59,6 +53,9 @@ class CIFAR10Classifier(object):
         x_test = x_test.astype('float32')
         x_train /= 255
         x_test /= 255
+
+        # Shuffle x_train for better model
+        x_train, y_train = sklearn.utils.shuffle(x_train, y_train, random_state=0)
 
         self.x_train = x_train
         self.y_train = y_train
