@@ -8,7 +8,7 @@ object WordLevelInvertedIndex {
     val result = sc.textFile(fileName)
                    .map{ line => // Split the lines on :, such that we end up with the doc_id and the text.
                       val array = line.split(":", 2)
-                      (array(0), array(1))
+                      (array(0).toInt, array(1))
                     } 
                   .flatMap { // flatMap split on one or more non-word characters, RDD is now a column of words, and a column of doc_id's that contain those words. Also calculate location inside the document.
                     case (doc_id, text) =>
@@ -29,16 +29,17 @@ object WordLevelInvertedIndex {
                   .groupBy { // Group by word such that we can connect all the docs that contain the word
                     case (word, (doc_id,pos,n)) => word
                   } 
-                  .map { // Finally all the grouped sequences of doc_id, pos, n tuples for each word and make a string out of them. Done.
+                  .map { // Finally all the grouped sequences of doc_id, pos, n are added to maps.
                     case (word, seq) => 
                       val seq2 = seq map {
-                        case (_, (doc_id, pos, n)) => (doc_id, pos, n)
+                        case (_, (doc_id, pos, n)) => HashMap[String,Integer](("doc_id", doc_id), ("pos", pos), ("count", n))
                       }
-                    (word, seq2.toVector) // Convert doc_id, pos, n tuple sequence to vector
+                    (word, seq2.toVector) // Convert sequence of maps to vector such that it can be output
                   }
-    val df = spark.createDataFrame(result) # Convert to dataframe without specifying the schema
-    val finaldf = df.toDF("word", "doc_id, pos, count") # Add column names.
-    finaldf.show() # Show top 20.
+    result.coalesce(1, true).saveAsTextFile("FileStore/tables/result12356.txt")
+    val df = spark.createDataFrame(result)
+    val finaldf = df.toDF("word", "doc_id, pos, count")
+    finaldf.show()
   }
 }
 
