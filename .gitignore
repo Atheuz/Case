@@ -1,7 +1,11 @@
 *.txt
 *.csv
-Case B/*
 Case C/*
 Case D/*
 *.pyc
 *.pyo
+*.pckl
+*.hdf5
+*.model
+Case B/cifar10/*
+.ipynb_checkpoints
